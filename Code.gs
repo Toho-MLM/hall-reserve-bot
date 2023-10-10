@@ -219,7 +219,3 @@ function sendLineNotify(message) {
   };
   UrlFetchApp.fetch("https://notify-api.line.me/api/notify", options);
 };
-
-function test() {
-  sendLineNotify("This is a test")
-}
