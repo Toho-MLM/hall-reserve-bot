@@ -5,6 +5,7 @@ function doPost(e) {
   let eventType = eventData.type
   let userId = eventData.source.userId;
   let userName = getDisplayName(userId);
+  let calender = CalendarApp.getCalendarById("ksmucdqse3lp8gap8ntljji3v8@group.calendar.google.com");
 
   if (eventData.source.type == "user") {
     switch (eventData.type) {
@@ -44,7 +45,7 @@ function doPost(e) {
             endPoint.setDate(endPoint.getDate() + 15);
             endPoint.setHours(0);
             endPoint.setMinutes(0);
-            let futureEvents = CalendarApp.getEvents(startPoint, endPoint).filter((event) => (event.getDescription().slice(13) == userId));
+            let futureEvents = calender.getEvents(startPoint, endPoint).filter((event) => (event.getDescription().slice(13) == userId));
             if (futureEvents.length == 0) {
               reply([{
                 'type': 'text',
@@ -60,7 +61,7 @@ function doPost(e) {
                   "actions": futureEvents.slice(0, 4).map(function (event) {
                     return ({
                       "type": "postback",
-                      "label": Utilities.formatDate(event.getStartTime(), 'Asia/Tokyo', "MM/dd HH:mm")+"～"+Utilities.formatDate(event.getEndTime(), 'Asia/Tokyo', "HH:mm"),
+                      "label": Utilities.formatDate(event.getStartTime(), 'Asia/Tokyo', "MM/dd HH:mm") + "～" + Utilities.formatDate(event.getEndTime(), 'Asia/Tokyo', "HH:mm"),
                       "data": "cancel?eventId=" + event.getId(),
                       "inputOption": "openRichMenu"
                     });
@@ -76,9 +77,26 @@ function doPost(e) {
         let postbackData = eventData.postback.data
         if (postbackData == "startDate") {
           let startDateString = eventData.postback.params.datetime;
+          // 開始日
           let startDate = new Date(startDateString);
-          startDate.setMinutes(startDate.getMinutes() + 1);
-          let minTime = Utilities.formatDate(startDate, 'Asia/Tokyo', "HH:mm");
+          // 最小日
+          let minDate = new Date(startDate);
+          minDate.setMinutes(minDate.getMinutes() + 1)
+          // 最大日
+          let maxDate = new Date(startDate);
+          maxDate.setHours(23);
+          maxDate.setMinutes(59);
+          // 初期日候補
+          let initDateTmp = new Date(startDate);
+          initDateTmp.setHours(initDateTmp.getHours() + 2);
+          let initDate = (initDateTmp > maxDate) ? maxDate : initDateTmp;
+          // 終了日までの時間
+          function timeDelta(d1) {
+            let minutes = Math.floor((d1.getTime() - startDate.getTime()) / (1000 * 60));
+            let hr = Math.floor(minutes / 60);
+            let min = (minutes % 60);
+            return String(hr).padStart(2, "0") + ":" + String(min).padStart(2, "0");
+          }
           reply([{
             "type": "template",
             "altText": "ホール予約の終了時刻・または利用時間を選択してください。",
@@ -91,17 +109,17 @@ function doPost(e) {
                   "label": "終了時刻を選択...",
                   "data": "endTime?startDate=" + startDateString,
                   "mode": "time",
-                  "initial": minTime,
+                  "initial": Utilities.formatDate(initDate, 'Asia/Tokyo', "HH:mm"),
                   "max": "23:59",
-                  "min": minTime
+                  "min": Utilities.formatDate(minDate, 'Asia/Tokyo', "HH:mm")
                 },
                 {
                   "type": "datetimepicker",
                   "label": "利用時間を選択...",
                   "data": "duration?startDate=" + startDateString,
                   "mode": "time",
-                  "initial": "02:00",
-                  "max": "06:00",
+                  "initial": timeDelta(initDate),
+                  "max": timeDelta(maxDate),
                   "min": "00:01"
                 }
               ]
@@ -129,7 +147,7 @@ function doPost(e) {
           lastReply(startDate, endDate)
         } else if (postbackData.startsWith("cancel")) {
           let eventId = postbackData.slice(15);
-          let eventToCancel = CalendarApp.getEventById(eventId);
+          let eventToCancel = calender.getEventById(eventId);
           eventToCancel.deleteEvent()
           reply([{
             'type': 'text',
@@ -138,11 +156,11 @@ function doPost(e) {
           sendLineNotify(`${userName}が${Utilities.formatDate(eventToCancel.getStartTime(), 'Asia/Tokyo', "MM/dd HH:mm")}から${Utilities.formatDate(eventToCancel.getEndTime(), 'Asia/Tokyo', "HH:mm")}までのホール予約を取り消しました。`)
         }
         function lastReply(startDate, endDate) {
-          let conflictedEvents = CalendarApp.getEvents(startDate, endDate);
+          let conflictedEvents = calender.getEvents(startDate, endDate);
           if (conflictedEvents.length == 0) {
-            let startDateStr = Utilities.formatDate(startDate, 'Asia/Tokyo', "yyyy-MM-dd HH:mm");
+            let startDateStr = Utilities.formatDate(startDate, 'Asia/Tokyo', "yyyy/MM/dd HH:mm");
             let endTimeStr = Utilities.formatDate(endDate, 'Asia/Tokyo', "HH:mm");
-            let newEvent = CalendarApp.createEvent(userName + "のホール予約", startDate, endDate, { description: "User LINE ID:" + userId });
+            let newEvent = calender.createEvent(userName + "のホール予約", startDate, endDate, { description: "User LINE ID:" + userId });
             newEvent.removeAllReminders();
             reply([{
               'type': 'text',
@@ -219,3 +237,9 @@ function sendLineNotify(message) {
   };
   UrlFetchApp.fetch("https://notify-api.line.me/api/notify", options);
 };
+
+function getCalendars(){
+  console.log(CalendarApp.getAllOwnedCalendars().map(function (calender) {
+    return [calender.getName() ,calender.getId()];
+  }))
+}
