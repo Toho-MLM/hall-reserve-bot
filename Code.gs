@@ -238,7 +238,21 @@ function doPost(e) {
               case "profile":
                 reply([{
                   'type': 'text',
-                  'text': `アカウント名：${userData[2]}\n初回利用：${userData[0]}\n最終更新：${userData[1]}`
+                  'text': `登録名：${userData[2]}\n初回利用：${userData[0]}\n最終更新：${userData[1]}`
+                }, {
+                  "type": "template",
+                  "altText": '名前を変更したい場合は、\n"/name 新しい名前"と送信してください。',
+                  "template": {
+                    "type": "buttons",
+                    "text": '名前を変更したい場合は、\n"/name 新しい名前"と送信してください。',
+                    "actions": [{
+                      "type": "postback",
+                      "label": "登録名の変更",
+                      "data": "null",
+                      "inputOption": "openKeyboard",
+                      "fillInText": "/name "
+                    }]
+                  }
                 }]);
                 break;
               case "startDate":
