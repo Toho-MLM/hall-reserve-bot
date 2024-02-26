@@ -37,6 +37,7 @@ function doPost(e) {
         deleteGroupData(groupId);
         break;
       case "message":
+      if (eventData.message.type == "text"){
         switch (eventData.message.text.split(" ")[0]) {
           case "!ID":
             reply([{
@@ -126,8 +127,7 @@ function doPost(e) {
             }
         }
         break;
-
-
+      }
       case "postback":
         let postbackData = eventData.postback.data
         let userData = getUserData(userId);
@@ -500,4 +500,8 @@ function getCalendars() {
     firestore.deleteDocument("groups/" + groupId);
   }
 
+}
+
+function customNotify() {
+  sendLineNotify("")
 }
