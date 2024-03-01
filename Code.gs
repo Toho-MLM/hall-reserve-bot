@@ -126,8 +126,8 @@ function doPost(e) {
               break;
             }
         }
-        break;
       }
+      break;
       case "postback":
         let postbackData = eventData.postback.data
         let userData = getUserData(userId);
