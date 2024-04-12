@@ -167,7 +167,7 @@ function doPost(e) {
             endPoint.setDate(endPoint.getDate() + 15);
             endPoint.setHours(0);
             endPoint.setMinutes(0);
-            let futureEvents = calender.getEvents(startPoint, endPoint).filter((event) => (event.getDescription() == adaptiveId));
+            let futureEvents = calender.getEvents(startPoint, endPoint).filter((event) => (event.getDescription() == HashSHA256(adaptiveId)));
 
             switch (eventData.postback.data.split("?")[0]) {
               case "reserve":
@@ -349,7 +349,7 @@ function doPost(e) {
               if (conflictedEvents.length == 0) {
                 let startDateStr = Utilities.formatDate(startDate, 'Asia/Tokyo', "yyyy/MM/dd HH:mm");
                 let endTimeStr = Utilities.formatDate(endDate, 'Asia/Tokyo', "HH:mm");
-                let newEvent = calender.createEvent(adaptiveName + "のホール予約", startDate, endDate, { description: adaptiveId });
+                let newEvent = calender.createEvent(adaptiveName + "のホール予約", startDate, endDate, { description: HashSHA256(adaptiveId) });
                 newEvent.removeAllReminders();
                 reply([{
                   'type': 'text',
@@ -434,11 +434,6 @@ function sendLineNotify(message) {
   UrlFetchApp.fetch("https://notify-api.line.me/api/notify", options);
 };
 
-function getCalendars() {
-  console.log(CalendarApp.getAllOwnedCalendars().map(function (calender) {
-    return [calender.getName(), calender.getId()];
-  }))
-}
 
 {
   let firestore = FirestoreApp.getFirestore(PropertiesService.getScriptProperties().getProperty("FirestoreClientEmail"), PropertiesService.getScriptProperties().getProperty("FirestorePrivateKey").replace(/\\n/g, "\n"), "hall-manager-9ce85");
@@ -502,6 +497,19 @@ function getCalendars() {
 
 }
 
-function customNotify() {
-  sendLineNotify("")
+function HashSHA256 (input) {
+ if(input==''){return "";}
+ const rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, input);
+ let txtHash = '';
+ for (let i = 0; i < rawHash.length; i++) {
+  let hashVal = rawHash[i];
+  if (hashVal < 0) {
+   hashVal += 256;
+  }
+  if (hashVal.toString(16).length == 1) {
+   txtHash += '0';
+  }
+  txtHash += hashVal.toString(16);
+ }
+ return txtHash.toUpperCase();
 }
